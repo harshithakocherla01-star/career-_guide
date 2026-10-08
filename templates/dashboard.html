@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Career Dashboard • TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Career Readiness Dashboard</h1>
+    <p class="page-subtitle">Deterministic evaluation of your current skill profile against your target role.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem; align-items: center;">
+    <a href="/api/report/pdf" class="btn btn-outline-primary" target="_blank">
+      <i class="fa-solid fa-file-pdf"></i> Download PDF Report
+    </a>
+    <a href="{{ url_for('web.roadmap_page') }}" class="btn btn-primary">
+      <i class="fa-solid fa-map"></i> View Roadmap
+    </a>
+  </div>
+</div>
+
+<!-- Profile Goals Bar -->
+<div class="card" style="margin-bottom: 1.5rem; background: #fff; padding: 1.25rem;">
+  <form id="goalsForm" style="display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-end;">
+    <div style="flex: 2; min-width: 240px;">
+      <label class="form-label" style="margin-bottom: 0.25rem;"><i class="fa-solid fa-crosshairs"></i> Target Career Role</label>
+      <select id="goal_role_id" class="form-select">
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if user.target_role_id == r.id %}selected{% endif %}>{{ r.title }} ({{ r.domain }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 160px;">
+      <label class="form-label" style="margin-bottom: 0.25rem;"><i class="fa-regular fa-clock"></i> Hours / Week</label>
+      <input type="number" id="goal_hours" class="form-control" value="{{ user.hours_per_week or 10 }}" min="2" max="60">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-secondary">
+        <i class="fa-solid fa-arrows-rotate"></i> Update Target
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Key Metric Highlights -->
+<div class="grid grid-cols-3" style="margin-bottom: 1.5rem;">
+  <!-- Readiness Score Ring -->
+  <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <div id="readinessRing" class="progress-ring-container">
+      <!-- Injected via charts.js -->
+    </div>
+    <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+      Formula: <code style="font-size: 0.75rem; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">100 * Σ(w_i * min(u_i/r_i, 1)) / Σ(w_i)</code>
+    </div>
+  </div>
+
+  <!-- Gap Status Counts -->
+  <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div class="card-title"><i class="fa-solid fa-chart-pie" style="color: var(--primary);"></i> Skill Gap Status</div>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin: 1rem 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><span class="badge badge-matched">Matched</span> Skills (Level Met)</span>
+        <strong id="statMatchedCount" style="font-size: 1.1rem; color: var(--success);">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><span class="badge badge-partial">Partial</span> Skills (Under-leveled)</span>
+        <strong id="statPartialCount" style="font-size: 1.1rem; color: var(--warning);">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><span class="badge badge-missing">Missing</span> Skills (Not in profile)</span>
+        <strong id="statMissingCount" style="font-size: 1.1rem; color: var(--danger);">-</strong>
+      </div>
+    </div>
+    <a href="{{ url_for('web.gap_analysis_page') }}" class="btn btn-secondary btn-sm" style="width: 100%;">
+      Detailed Gap Breakdown <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+
+  <!-- Quick Action Hub -->
+  <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div class="card-title"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Action Hub</div>
+    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0;">
+      <a href="{{ url_for('web.resume_page') }}" class="btn btn-secondary btn-sm" style="justify-content: flex-start;">
+        <i class="fa-solid fa-file-arrow-up" style="color: var(--primary);"></i> Upload / Re-scan Resume
+      </a>
+      <a href="{{ url_for('web.recommendations_page') }}" class="btn btn-secondary btn-sm" style="justify-content: flex-start;">
+        <i class="fa-solid fa-compass" style="color: #7c3aed;"></i> Alternative Role Matches
+      </a>
+      <a href="{{ url_for('web.interview_page') }}" class="btn btn-secondary btn-sm" style="justify-content: flex-start;">
+        <i class="fa-solid fa-user-tie" style="color: var(--success);"></i> Role Mock Interview Prep
+      </a>
+    </div>
+    <button id="btnRegenerateRoadmap" class="btn btn-primary btn-sm" style="width: 100%;">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Roadmap
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  try {
+    // 1. Fetch analysis data
+    const analysis = await TechTide.api('/api/analysis/run', { method: 'POST' });
+    
+    // Render progress ring
+    const overallScore = analysis.score.overall_score || 0;
+    TechTideCharts.renderProgressRing('readinessRing', overallScore);
+
+    // Update summary counts
+    document.getElementById('statMatchedCount').textContent = analysis.gaps.summary.matched_count;
+    document.getElementById('statPartialCount').textContent = analysis.gaps.summary.partial_count;
+    document.getElementById('statMissingCount').textContent = analysis.gaps.summary.missing_count;
+
+
+  } catch (err) {
+    TechTide.toast(`Dashboard error: ${err.message}`, 'error');
+  }
+}
+
+// Update Goals Form
+document.getElementById('goalsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const roleId = document.getElementById('goal_role_id').value;
+  const hours = document.getElementById('goal_hours').value;
+  await TechTide.updateProfileGoals(parseInt(roleId), parseInt(hours));
+  loadDashboard();
+});
+
+// Regenerate Roadmap
+document.getElementById('btnRegenerateRoadmap').addEventListener('click', async () => {
+  const btn = document.getElementById('btnRegenerateRoadmap');
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating...`;
+  try {
+    await TechTide.api('/api/roadmap/generate', { method: 'POST' });
+    TechTide.toast('Personalized career roadmap generated!', 'success');
+    setTimeout(() => {
+      window.location.href = '/roadmap';
+    }, 400);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Roadmap`;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

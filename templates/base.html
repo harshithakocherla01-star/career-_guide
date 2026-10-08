@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AI Skill Gap & Career Roadmap Platform{% endblock %} • TechTide</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="{{ url_for('web.home') }}" class="nav-brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-compass-drafting"></i>
+      </div>
+      <div>TechTide <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Career AI</span></div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="{{ url_for('web.home') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
+      {% if user %}
+        <li><a href="{{ url_for('web.dashboard_page') }}" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">Dashboard</a></li>
+        <li><a href="{{ url_for('web.resume_page') }}" class="nav-link {% if request.path == '/resume' %}active{% endif %}">Resume ATS</a></li>
+        <li><a href="{{ url_for('web.gap_analysis_page') }}" class="nav-link {% if request.path == '/gap-analysis' %}active{% endif %}">Gap Analysis</a></li>
+        <li><a href="{{ url_for('web.roadmap_page') }}" class="nav-link {% if request.path == '/roadmap' %}active{% endif %}">Roadmap</a></li>
+        <li><a href="{{ url_for('web.recommendations_page') }}" class="nav-link {% if request.path == '/recommendations' %}active{% endif %}">Role Match</a></li>
+        <li><a href="{{ url_for('web.interview_page') }}" class="nav-link {% if request.path == '/interview' %}active{% endif %}">Interview Prep</a></li>
+        {% if user.role == 'admin' %}
+          <li><a href="{{ url_for('web.admin_page') }}" class="nav-link {% if request.path == '/admin' %}active{% endif %}" style="color: #7c3aed;"><i class="fa-solid fa-shield-halved"></i> Admin</a></li>
+        {% endif %}
+      {% endif %}
+    </ul>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      {% if user %}
+        <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">
+          <i class="fa-regular fa-user"></i> {{ user.name }}
+          <span class="badge badge-primary" style="margin-left: 4px;">{{ user.role }}</span>
+        </span>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" onclick="localStorage.removeItem('techtide_token');">Sign Out</a>
+      {% else %}
+        <a href="{{ url_for('web.login_page') }}" class="btn btn-secondary btn-sm">Sign In</a>
+        <a href="{{ url_for('web.register_page') }}" class="btn btn-primary btn-sm">Get Started</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Main Content Body -->
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div style="margin-bottom: 0.25rem;">
+      <strong>TechTide AI Skill Gap & Career Roadmap Platform</strong> • EdTech / Career Development Hackday 1.0
+    </div>
+    <div style="font-size: 0.8rem;">
+      Hybrid AI Architecture: Deterministic Scoring & Prioritization Engines • Curated Grounded Roadmaps • Resilient Fallbacks
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

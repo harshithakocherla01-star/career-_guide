@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Parsing & ATS Feedback • TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Resume Parsing & ATS Skill Extraction</h1>
+    <p class="page-subtitle">Upload your resume (PDF / DOCX / TXT) for instant NLP skill extraction and ATS compliance scoring.</p>
+  </div>
+  <a href="{{ url_for('web.dashboard_page') }}" class="btn btn-secondary">
+    <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+  </a>
+</div>
+
+<div class="grid grid-cols-2" style="margin-bottom: 2rem;">
+  <!-- Upload Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-file-arrow-up" style="color: var(--primary);"></i> Upload Document
+      </div>
+      <span class="badge badge-primary">PDF, DOCX, TXT</span>
+    </div>
+
+    <!-- Dropzone -->
+    <div id="dropZone" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s ease;">
+      <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 0.75rem;"></i>
+      <div style="font-weight: 700; margin-bottom: 0.25rem;">Drag and drop your resume file here</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Supports PDF, DOCX or plain text files up to 16MB</div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fileInput').click()">
+        Browse Files
+      </button>
+      <input type="file" id="fileInput" accept=".pdf,.docx,.doc,.txt" style="display: none;">
+      <div id="selectedFileName" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--primary);"></div>
+    </div>
+
+    <!-- Divider -->
+    <div style="text-align: center; margin: 1.25rem 0; position: relative;">
+      <hr style="border: none; border-top: 1px solid var(--border);">
+      <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">or paste text</span>
+    </div>
+
+    <!-- Raw Text Paste Form -->
+    <form id="textForm">
+      <div class="form-group">
+        <textarea id="rawResumeText" class="form-control" rows="6" placeholder="Paste your resume content or LinkedIn summary directly here..."></textarea>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadSampleResume()">
+          <i class="fa-regular fa-file-lines"></i> Load Sample Full-Stack Resume
+        </button>
+        <button type="submit" id="btnParseResume" class="btn btn-primary" style="flex: 1;">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Extract Skills & Analyze
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ATS Analysis & Feedback Card -->
+  <div class="card" id="atsResultCard">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-award" style="color: #f59e0b;"></i> ATS Readiness & Feedback
+      </div>
+      <span id="atsScoreBadge" class="badge badge-primary">Score: Pending</span>
+    </div>
+
+    <div id="atsContentPlaceholder" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+      <i class="fa-regular fa-clipboard" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: #cbd5e1;"></i>
+      <p style="font-size: 0.95rem;">Upload or paste your resume to trigger ATS compliance scoring, contact detection, and keyword analysis.</p>
+    </div>
+
+    <div id="atsContentResult" style="display: none;">
+      <!-- Contact Detected -->
+      <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem;">
+          Detected Contact Info
+        </div>
+        <div id="detectedContact" style="font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.75rem;"></div>
+      </div>
+
+      <!-- Actionable Feedback -->
+      <div style="margin-bottom: 1rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">
+          ATS Optimization Recommendations:
+        </div>
+        <ul id="atsFeedbackList" style="padding-left: 1.25rem; font-size: 0.85rem; color: #475569; display: flex; flex-direction: column; gap: 0.4rem;"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Extracted Skills & Competencies List -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-tags" style="color: var(--primary);"></i> Your Current Skill Profile (Extracted & Verified)
+    </div>
+    <span class="badge badge-primary" id="skillCountBadge">0 skills</span>
+  </div>
+
+  <div id="skillsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+    <div style="color: var(--text-muted); font-size: 0.9rem;">Loading user skills...</div>
+  </div>
+</div>
+
+<!-- Manual Skill Adder Modal/Bar -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-plus-circle" style="color: var(--success);"></i> Add or Adjust a Skill Manually
+    </div>
+  </div>
+  <form id="addSkillForm" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-top: 0.5rem;">
+    <div style="flex: 2; min-width: 220px;">
+      <label class="form-label">Canonical Skill</label>
+      <select id="manual_skill_id" class="form-select" required>
+        <option value="">-- Choose Skill from Taxonomy --</option>
+        {% for s in skills %}
+          <option value="{{ s.id }}">{{ s.name }} ({{ s.category }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label">Proficiency Level</label>
+      <select id="manual_level" class="form-select">
+        <option value="1">Level 1 - Novice</option>
+        <option value="2">Level 2 - Beginner</option>
+        <option value="3" selected>Level 3 - Intermediate</option>
+        <option value="4">Level 4 - Advanced</option>
+        <option value="5">Level 5 - Expert / Architect</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-success">
+        <i class="fa-solid fa-save"></i> Save Skill
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Sample resume loader
+function loadSampleResume() {
+  const sample = `Alex Rivera
+Email: alex.rivera@example.com | Phone: (555) 234-5678 | GitHub: github.com/alexrivera-dev | LinkedIn: linkedin.com/in/alexrivera
+
+SUMMARY
+Enthusiastic Full Stack Software Engineer with hands-on experience building modern, responsive web applications using JavaScript, HTML5/CSS3, and Python. Solid understanding of relational database queries with SQL and version control using Git. Passionate about learning Docker containerization and cloud architectures.
+
+EDUCATION
+Bachelor of Science in Computer Science | 2024
+University of Technology | GPA: 3.8/4.0
+
+TECHNICAL SKILLS
+Languages: JavaScript (ES6+), Python, SQL, HTML5, CSS3
+Frameworks & Libraries: React, Node.js, Express, Flask
+Databases & Tools: PostgreSQL, Git, GitHub, Linux, Bash, VS Code
+Concepts: RESTful API design, responsive UI design, unit testing basics
+
+KEY PROJECTS
+- TaskMaster Web Application: Built a reactive task management dashboard using React and Node.js with REST API endpoints, reducing task organization latency by 25%.
+- E-Commerce Catalog Service: Developed backend routes in Flask with SQL database queries to handle product listings and checkout workflows.
+- Developer Portfolio: Responsive website built with HTML5, CSS3, and JavaScript adhering to CWV standards.
+
+EXPERIENCE
+Software Engineering Intern | TechSphere Labs (2023 - 2024)
+- Developed and tested REST APIs using JavaScript and Express.
+- Collaborated on frontend features using React and maintained code versioning via Git.`;
+  document.getElementById('rawResumeText').value = sample;
+}
+
+// Drag & drop logic
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter', 'dragover'].forEach(name => {
+  dropZone.addEventListener(name, (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--primary)';
+    dropZone.style.background = 'var(--primary-light)';
+  });
+});
+
+['dragleave', 'drop'].forEach(name => {
+  dropZone.addEventListener(name, (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#cbd5e1';
+    dropZone.style.background = '#f8fafc';
+  });
+});
+
+dropZone.addEventListener('drop', (e) => {
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    fileInput.files = files;
+    handleFileSelected(files[0]);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    handleFileSelected(fileInput.files[0]);
+  }
+});
+
+function handleFileSelected(file) {
+  document.getElementById('selectedFileName').textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+}
+
+// Submit File or Raw Text
+document.getElementById('textForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btnParseResume');
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing NLP Extraction...`;
+
+  try {
+    let res;
+    if (fileInput.files.length > 0) {
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      const token = localStorage.getItem('techtide_token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const resp = await fetch('/api/resume/upload', {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      res = await resp.json();
+      if (!resp.ok) throw new Error(res.error || 'Upload failed');
+    } else {
+      const rawText = document.getElementById('rawResumeText').value.trim();
+      if (!rawText) {
+        throw new Error('Please select a file or paste resume text.');
+      }
+      res = await TechTide.api('/api/resume/upload', {
+        method: 'POST',
+        body: JSON.stringify({ raw_text: rawText })
+      });
+    }
+
+    TechTide.toast(`Extracted ${res.extracted_skills_count} skills! ATS Score: ${res.ats_score}`, 'success');
+    renderATSResults(res.parsed_data);
+    loadUserSkills();
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="fa-solid fa-magnifying-glass-chart"></i> Extract Skills & Analyze`;
+  }
+});
+
+function renderATSResults(data) {
+  if (!data) return;
+  document.getElementById('atsContentPlaceholder').style.display = 'none';
+  document.getElementById('atsContentResult').style.display = 'block';
+
+  const scoreBadge = document.getElementById('atsScoreBadge');
+  const score = data.ats_score || 0;
+  scoreBadge.textContent = `ATS Score: ${score} / 100`;
+  scoreBadge.className = `badge ${score >= 75 ? 'badge-matched' : (score >= 50 ? 'badge-partial' : 'badge-missing')}`;
+
+  // Contact
+  const contact = data.contact || {};
+  const contactDiv = document.getElementById('detectedContact');
+  contactDiv.innerHTML = `
+    <div><i class="fa-solid fa-envelope"></i> ${contact.email || '<span style="color:var(--danger)">Missing</span>'}</div>
+    <div><i class="fa-solid fa-phone"></i> ${contact.phone || '<span style="color:var(--text-muted)">Not detected</span>'}</div>
+    <div><i class="fa-brands fa-github"></i> ${contact.github || '<span style="color:var(--text-muted)">Not detected</span>'}</div>
+    <div><i class="fa-brands fa-linkedin"></i> ${contact.linkedin || '<span style="color:var(--text-muted)">Not detected</span>'}</div>
+  `;
+
+  // Feedback
+  const feedbackList = document.getElementById('atsFeedbackList');
+  const feedback = data.ats_feedback || [];
+  feedbackList.innerHTML = feedback.map(f => `<li>${f}</li>`).join('');
+}
+
+// Load User Skills List
+async function loadUserSkills() {
+  try {
+    const res = await TechTide.api('/api/resume/skills');
+    const skills = res.skills || [];
+    document.getElementById('skillCountBadge').textContent = `${skills.length} skills`;
+
+    const grid = document.getElementById('skillsGrid');
+    if (skills.length === 0) {
+      grid.innerHTML = `<div style="color: var(--text-muted); padding: 1rem;">No skills in your profile yet. Upload a resume or add skills manually below.</div>`;
+      return;
+    }
+
+    grid.innerHTML = skills.map(s => `
+      <div style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem;">${s.skill_name}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.4rem;">${s.category} • Source: ${s.source}</div>
+          <span class="badge badge-primary">Proficiency: Level ${s.level} / 5</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="color: var(--danger); border-color: #fecaca;" onclick="deleteSkill('${s.skill_id}')">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function deleteSkill(skillId) {
+  try {
+    await TechTide.api(`/api/resume/skills/${skillId}`, { method: 'DELETE' });
+    TechTide.toast('Skill removed', 'info');
+    loadUserSkills();
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+
+// Manual skill add
+document.getElementById('addSkillForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const skill_id = document.getElementById('manual_skill_id').value;
+  const level = document.getElementById('manual_level').value;
+
+  try {
+    await TechTide.api('/api/resume/skills', {
+      method: 'POST',
+      body: JSON.stringify({ skill_id, level: parseInt(level) })
+    });
+    TechTide.toast('Skill saved successfully', 'success');
+    loadUserSkills();
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+
+// Load existing analysis if available
+async function checkExistingAnalysis() {
+  try {
+    const res = await TechTide.api('/api/resume/analysis');
+    if (res.has_resume && res.resume) {
+      renderATSResults(res.resume.parsed_data);
+    }
+  } catch (err) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadUserSkills();
+  checkExistingAnalysis();
+});
+</script>
+{% endblock %}

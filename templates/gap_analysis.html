@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Gap Analysis & Prioritization • TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Skill Gap Analysis & Prioritization</h1>
+    <p class="page-subtitle">Deterministic comparison between your profile and target role requirements, ranked via DAG dependency order.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="{{ url_for('web.roadmap_page') }}" class="btn btn-primary">
+      <i class="fa-solid fa-route"></i> Go to Learning Roadmap
+    </a>
+  </div>
+</div>
+
+<!-- Summary Metrics Bar -->
+<div class="grid grid-cols-4" style="margin-bottom: 1.5rem;">
+  <div class="card" style="border-left: 4px solid var(--primary);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Role Skills</div>
+    <div id="statTotalSkills" style="font-size: 1.85rem; font-weight: 800; color: var(--text-main);">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--success);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Matched (Level Met)</div>
+    <div id="statMatched" style="font-size: 1.85rem; font-weight: 800; color: var(--success);">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--warning);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Partial (Under-leveled)</div>
+    <div id="statPartial" style="font-size: 1.85rem; font-weight: 800; color: var(--warning);">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--danger);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Missing Deficiencies</div>
+    <div id="statMissing" style="font-size: 1.85rem; font-weight: 800; color: var(--danger);">-</div>
+  </div>
+</div>
+
+<!-- Prioritized Learnable Sequence (Section 5.2) -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-arrow-down-short-wide" style="color: var(--primary);"></i> Prioritized Learning Order (DAG Topological Sequence)
+    </div>
+    <span class="badge badge-primary">Formula: weight * (req_level - user_level) / effort_weeks</span>
+  </div>
+  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+    Ranked so foundational prerequisites come first (e.g. Linux before Docker, Python before Machine Learning), maximizing immediate readiness impact with minimum effort.
+  </p>
+
+  <div id="prioritiesContainer" style="display: flex; flex-direction: column; gap: 0.75rem;">
+    <div style="color: var(--text-muted); font-size: 0.9rem;">Loading prioritized skills...</div>
+  </div>
+</div>
+
+<!-- Detailed Role Skill Classification Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-list-check" style="color: #7c3aed;"></i> Full Role Competency Matrix
+    </div>
+    <!-- Filter Buttons -->
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="btn btn-secondary btn-sm filter-btn active" onclick="filterSkills('all', this)">All</button>
+      <button class="btn btn-secondary btn-sm filter-btn" onclick="filterSkills('matched', this)">Matched</button>
+      <button class="btn btn-secondary btn-sm filter-btn" onclick="filterSkills('partial', this)">Partial</button>
+      <button class="btn btn-secondary btn-sm filter-btn" onclick="filterSkills('missing', this)">Missing</button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Skill</th>
+          <th>Category</th>
+          <th>Weight</th>
+          <th>Required Level</th>
+          <th>Your Level</th>
+          <th>Status</th>
+          <th>Gap Delta</th>
+        </tr>
+      </thead>
+      <tbody id="skillsTableBody">
+        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading role requirements...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allGapData = { matched: [], partial: [], missing: [] };
+
+async function loadGapAnalysis() {
+  try {
+    // 1. Load Gaps
+    const gapsRes = await TechTide.api('/api/analysis/gaps');
+    allGapData = gapsRes;
+
+    document.getElementById('statTotalSkills').textContent = gapsRes.summary.total_skills;
+    document.getElementById('statMatched').textContent = gapsRes.summary.matched_count;
+    document.getElementById('statPartial').textContent = gapsRes.summary.partial_count;
+    document.getElementById('statMissing').textContent = gapsRes.summary.missing_count;
+
+    renderSkillsTable('all');
+
+    // 2. Load Priorities
+    const prioRes = await TechTide.api('/api/analysis/priorities');
+    const priorities = prioRes.priorities || [];
+    renderPriorities(priorities);
+
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+
+function renderPriorities(priorities) {
+  const cont = document.getElementById('prioritiesContainer');
+  if (priorities.length === 0) {
+    cont.innerHTML = `<div style="color: var(--success); font-weight: 600; padding: 1rem;"><i class="fa-solid fa-circle-check"></i> No skill gaps remaining! You meet all competency levels.</div>`;
+    return;
+  }
+
+  cont.innerHTML = priorities.map(p => `
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="background: #2563eb; color: #fff; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;">
+          #${p.rank}
+        </div>
+        <div>
+          <div style="font-weight: 700; color: #0f172a; font-size: 1rem;">${p.skill_name}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">
+            Category: ${p.category} • Required: Level ${p.required_level} (Current: ${p.user_level})
+            ${p.prerequisites && p.prerequisites.length > 0 ? `• <span style="color:#7c3aed;">Prerequisites: ${p.prerequisites.join(', ')}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="text-align: right; font-size: 0.8rem;">
+          <div style="color: var(--text-muted);">Est. Effort: <b>${p.effort_weeks} wks</b></div>
+          <div style="color: var(--text-muted);">Role Weight: <b>${p.weight}</b></div>
+        </div>
+        <span class="badge badge-primary" style="font-size: 0.85rem; padding: 0.35rem 0.7rem;">
+          Priority: ${p.priority}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderSkillsTable(filter) {
+  const tbody = document.getElementById('skillsTableBody');
+  let list = [];
+
+  if (filter === 'all') {
+    list = [...allGapData.matched, ...allGapData.partial, ...allGapData.missing];
+  } else if (filter === 'matched') {
+    list = allGapData.matched;
+  } else if (filter === 'partial') {
+    list = allGapData.partial;
+  } else if (filter === 'missing') {
+    list = allGapData.missing;
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No skills found for filter "${filter}".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    let badgeClass = 'badge-missing';
+    let statusLabel = 'Missing';
+    if (item.status === 'matched') {
+      badgeClass = 'badge-matched';
+      statusLabel = 'Matched';
+    } else if (item.status === 'partial') {
+      badgeClass = 'badge-partial';
+      statusLabel = 'Partial';
+    }
+
+    return `
+      <tr>
+        <td><strong>${item.skill_name}</strong></td>
+        <td><span style="font-size: 0.8rem; color: var(--text-muted);">${item.category}</span></td>
+        <td>${item.weight}</td>
+        <td>Level ${item.required_level}</td>
+        <td>Level ${item.user_level}</td>
+        <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
+        <td>${item.gap > 0 ? `<span style="color: var(--danger); font-weight: 600;">+${item.gap} levels</span>` : `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> Complete</span>`}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterSkills(filter, element) {
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  if (element) {
+    element.classList.add('active');
+  } else if (window.event && window.event.target) {
+    window.event.target.classList.add('active');
+  }
+  renderSkillsTable(filter);
+}
+
+document.addEventListener('DOMContentLoaded', loadGapAnalysis);
+</script>
+{% endblock %}

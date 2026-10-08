@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In • TechTide Career Platform{% endblock %}
+
+{% block content %}
+<div style="max-width: 440px; margin: 3rem auto;">
+  <div class="card">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-icon" style="margin: 0 auto 0.75rem auto; width: 44px; height: 44px; font-size: 1.3rem;">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h2 style="font-size: 1.5rem; font-weight: 800;">Welcome Back</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Sign in to access your skills analysis and roadmap</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" class="form-control" placeholder="name@example.com" required value="alex@techtide.io">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="••••••••" required value="alex123">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.7rem; margin-top: 0.5rem;">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+      </button>
+    </form>
+
+    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed var(--border); text-align: center;">
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">Instant Demo Accounts:</p>
+      <div style="display: flex; gap: 0.5rem; justify-content: center;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="setDemo('alex@techtide.io', 'alex123')">
+          <i class="fa-solid fa-user"></i> Candidate Alex
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="setDemo('admin@techtide.io', 'admin123')">
+          <i class="fa-solid fa-shield"></i> Admin
+        </button>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 1.25rem; font-size: 0.85rem;">
+      Don't have an account? <a href="{{ url_for('web.register_page') }}" style="color: var(--primary); font-weight: 600;">Sign up</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setDemo(email, pass) {
+  document.getElementById('email').value = email;
+  document.getElementById('password').value = pass;
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  try {
+    const res = await TechTide.api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    localStorage.setItem('techtide_token', res.token);
+    TechTide.toast('Login successful! Redirecting...', 'success');
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 400);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+</script>
+{% endblock %}

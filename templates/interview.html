@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}Virtual Interview Prep | TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title">Virtual AI Interview</h1><p class="page-subtitle">Practice a role specific interview with a live, adaptive AI interviewer.</p></div>
+  <a href="{{ url_for('web.dashboard_page') }}" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<section id="interviewSetup" class="interview-setup card">
+  <div class="interview-setup-heading">
+    <div><span class="interview-eyebrow"><i class="fa-solid fa-sparkles"></i> YOUR PRACTICE ROOM</span><h2>Set up your interview</h2><p>Choose the role and format. Your interviewer will adapt to your answers.</p></div>
+  </div>
+  <form id="setupForm">
+    <div class="interview-config-grid">
+      <div class="form-group"><label class="form-label" for="roleSelect">Target role</label><select class="form-select" id="roleSelect" required>{% for role in roles %}<option value="{{ role.id }}" {% if user.target_role_id == role.id %}selected{% endif %}>{{ role.title }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label class="form-label" for="experienceSelect">Experience level</label><select class="form-select" id="experienceSelect"><option>Beginner</option><option selected>Intermediate</option><option>Advanced</option></select></div>
+      <div class="form-group"><label class="form-label" for="typeSelect">Interview type</label><select class="form-select" id="typeSelect"><option>Technical</option><option>Behavioral</option><option>HR</option><option selected>Mixed</option></select></div>
+      <div class="form-group"><label class="form-label" for="durationSelect">Duration</label><select class="form-select" id="durationSelect"><option value="10">10 minutes</option><option value="20" selected>20 minutes</option><option value="30">30 minutes</option></select></div>
+      <div class="form-group"><label class="form-label" for="difficultySelect">Difficulty</label><select class="form-select" id="difficultySelect"><option>Easy</option><option selected>Medium</option><option>Hard</option></select></div>
+      <div class="form-group interview-job-description"><label class="form-label" for="jobDescription">Job description <span class="optional-label">Optional</span></label><textarea class="form-control" id="jobDescription" rows="3" maxlength="5000" placeholder="Paste a job description to tailor the questions"></textarea></div>
+    </div>
+    <div class="interview-setup-footer"><p><i class="fa-solid fa-microphone-lines"></i> Voice input uses your browser's speech recognition. You can always type instead.</p><button class="btn btn-primary" id="btnStartInterview" type="submit"><i class="fa-solid fa-video"></i> Start Virtual Interview</button></div>
+    <p class="interview-setup-error" id="setupError" role="alert"></p>
+  </form>
+</section>
+
+<section id="historySection" class="interview-history card">
+  <div class="card-header"><div><h2 class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent interviews</h2><small style="color:var(--text-muted)">Resume an active session or view a past report.</small></div><button type="button" id="refreshHistory" class="btn btn-secondary btn-sm" aria-label="Refresh interview history"><i class="fa-solid fa-rotate"></i></button></div>
+  <div id="interviewHistoryList" class="history-list"><p class="transcript-empty">Loading interview history…</p></div>
+</section>
+
+<section id="interviewWorkspace" class="interview-workspace" hidden>
+  <div class="interview-main-column">
+    <section class="interview-stage card">
+      <div class="stage-topbar"><div><span class="interview-live-dot"></span><span class="stage-live-label">LIVE SESSION</span><span id="stageRoleTitle" class="stage-role"></span></div><span id="interviewTimer" class="stage-timer">--:--</span></div>
+      <div class="stage-screen">
+        <div id="aiAvatar" class="ai-avatar" aria-label="AI interviewer avatar"><div class="avatar-orbit"></div><div class="avatar-face"><i class="fa-solid fa-user-tie"></i></div><div class="audio-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <video id="candidateCameraPreview" class="camera-preview" autoplay muted playsinline hidden></video>
+        <div class="stage-interviewer-name">AI Interviewer <span>• virtual hiring manager</span></div>
+        <div id="aiSpeakingLabel" class="stage-speaking-label">Ready to begin</div>
+      </div>
+      <div class="stage-question-row"><div><div class="stage-question-kicker"><i class="fa-regular fa-comment-dots"></i> INTERVIEWER</div><div id="currentQuestionText" class="stage-question">Your first question will appear here.</div></div></div>
+      <div class="stage-progress-row"><span id="questionProgressText">Question 1</span><div class="stage-progress-track"><span id="questionProgressBar"></span></div><span id="experienceLabel">Mixed • Medium</span></div>
+      <div class="stage-controls">
+        <button type="button" id="btnMuteMic" class="stage-control" aria-pressed="false"><i class="fa-solid fa-microphone"></i><span>Mute mic</span></button>
+        <button type="button" id="btnCamera" class="stage-control"><i class="fa-solid fa-video-slash"></i><span>Camera off</span></button>
+        <button type="button" id="btnEndInterview" class="btn btn-danger"><i class="fa-solid fa-phone-slash"></i> End interview</button>
+      </div>
+      <div id="voiceFallbackMessage" class="voice-fallback" hidden></div>
+      <div class="answer-composer"><label for="candidateAnswer" class="form-label">Your answer <span id="micStatus" class="mic-status"><i class="fa-solid fa-microphone"></i> Microphone ready</span></label><textarea id="candidateAnswer" class="form-control" rows="3" placeholder="Speak naturally, or type your answer here…"></textarea><div class="composer-footer"><span id="composerHint">Your interviewer will listen, then respond with a follow-up.</span><button type="button" id="btnSendAnswer" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Send answer</button></div></div>
+    </section>
+  </div>
+
+  <aside class="transcript-panel card">
+    <div class="transcript-heading"><div><h2 class="card-title"><i class="fa-solid fa-closed-captioning"></i> Live transcript</h2><p>Conversation appears here as it happens.</p></div><span class="transcript-live-badge"><i></i> LIVE</span></div>
+    <div id="transcriptLog" class="transcript-log" aria-live="polite" aria-label="Live interview transcript"><div class="transcript-empty">The interview transcript will appear here.</div></div>
+    <div class="transcript-footer"><span id="transcriptCount">0 messages</span><button type="button" id="btnDownloadTranscript" class="btn btn-secondary btn-sm"><i class="fa-solid fa-download"></i> Download .txt</button></div>
+  </aside>
+</section>
+
+<section id="reportSection" class="interview-report card" hidden>
+  <div class="report-header"><div class="report-icon"><i class="fa-solid fa-chart-line"></i></div><div><span class="interview-eyebrow">INTERVIEW COMPLETE</span><h2>Your interview report</h2><p id="reportSummary"></p></div><div class="report-overall"><strong id="reportOverall">--</strong><span>out of 100</span></div></div>
+  <div class="report-scores" id="reportScores"></div>
+  <div class="report-feedback-grid"><div class="report-feedback-card"><h3><i class="fa-solid fa-thumbs-up"></i> Strengths</h3><ul id="reportStrengths"></ul></div><div class="report-feedback-card"><h3><i class="fa-solid fa-bullseye"></i> Weaknesses &amp; areas to improve</h3><ul id="reportImprovements"></ul></div><div class="report-feedback-card"><h3><i class="fa-solid fa-book-open"></i> Recommended topics</h3><ul id="reportTopics"></ul></div></div>
+  <div class="report-next"><strong>Suggested next practice</strong><p id="reportNextPractice"></p></div>
+  <div class="report-actions"><button type="button" id="btnRestartInterview" class="btn btn-primary"><i class="fa-solid fa-rotate-left"></i> New interview</button><button type="button" id="btnReportTranscript" class="btn btn-secondary"><i class="fa-solid fa-download"></i> Download transcript</button></div>
+</section>
+<div id="interviewToast" class="interview-toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/interview_voice.js') }}"></script>
+<script>
+let activeSessionId = null;
+let activeConfig = null;
+let transcriptMessages = [];
+let listeningMuted = false;
+let aiIsSpeaking = false;
+let sendingResponse = false;
+let interviewEnded = false;
+let endAfterResponseReason = null;
+let autoSendTimer = null;
+let countdownTimer = null;
+let cameraStream = null;
+
+const transcriptLog = document.getElementById('transcriptLog');
+const answerBox = document.getElementById('candidateAnswer');
+const voiceFallback = !window.SpeechRecognition && !window.webkitSpeechRecognition;
+
+function showToast(message, type = 'error') {
+  const toast = document.getElementById('interviewToast');
+  toast.textContent = message;
+  toast.className = `interview-toast visible ${type}`;
+  window.clearTimeout(showToast.timeout);
+  showToast.timeout = window.setTimeout(() => toast.classList.remove('visible'), 5000);
+}
+
+function localTime(value) {
+  if (!value) return new Date();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function renderTranscript(partial = '') {
+  const messages = transcriptMessages.slice();
+  if (partial.trim()) messages.push({speaker: 'candidate', text: partial.trim(), partial: true, created_at: new Date().toISOString()});
+  if (!messages.length) {
+    transcriptLog.innerHTML = '<div class="transcript-empty">The interview transcript will appear here.</div>';
+    document.getElementById('transcriptCount').textContent = '0 messages';
+    return;
+  }
+  transcriptLog.innerHTML = messages.map(message => `<article class="transcript-message ${message.speaker === 'candidate' ? 'candidate-message' : 'ai-message'}${message.partial ? ' partial-message' : ''}"><div class="message-meta"><strong></strong><time></time></div><p></p></article>`).join('');
+  transcriptLog.querySelectorAll('.transcript-message').forEach((element, index) => {
+    const message = messages[index];
+    element.querySelector('strong').textContent = message.speaker === 'candidate' ? (message.partial ? 'You · live' : 'You') : 'AI Interviewer';
+    element.querySelector('time').textContent = localTime(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    element.querySelector('p').textContent = message.text;
+  });
+  document.getElementById('transcriptCount').textContent = `${transcriptMessages.length} message${transcriptMessages.length === 1 ? '' : 's'}`;
+  transcriptLog.scrollTop = transcriptLog.scrollHeight;
+}
+
+function appendMessages(messages) {
+  transcriptMessages.push(...messages);
+  renderTranscript();
+}
+
+function setStatus(text, state = '') {
+  document.getElementById('aiSpeakingLabel').textContent = text;
+  document.getElementById('micStatus').className = `mic-status ${state}`;
+  document.getElementById('micStatus').innerHTML = `<i class="fa-solid ${state === 'listening' ? 'fa-microphone-lines' : 'fa-microphone'}"></i> ${state === 'listening' ? 'Listening' : (listeningMuted ? 'Microphone muted' : 'Microphone ready')}`;
+}
+
+let speechToText;
+let textToSpeech;
+
+function startListening() {
+  if (!speechToText || !speechToText.supported || listeningMuted || aiIsSpeaking || sendingResponse || interviewEnded) return;
+  const started = speechToText.start();
+  if (started) {
+    setStatus('Listening to your answer…', 'listening');
+    document.getElementById('btnMuteMic').innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mute mic</span>';
+    document.getElementById('btnMuteMic').setAttribute('aria-pressed', 'false');
+  }
+}
+
+function speakInterviewer(text) {
+  speechToText?.stop();
+  aiIsSpeaking = true;
+  document.getElementById('aiAvatar').classList.add('speaking');
+  setStatus('AI interviewer is speaking');
+  textToSpeech.speak(text);
+}
+
+function updatePartial(finalText, interimText) {
+  const draft = [finalText, interimText].filter(Boolean).join(' ').trim();
+  answerBox.value = draft;
+  renderTranscript(draft);
+  if (draft) {
+    setStatus('Listening to your answer…', 'listening');
+    document.getElementById('composerHint').textContent = interimText ? 'Transcribing your speech…' : 'Answer captured. Keep speaking or send your answer.';
+    window.clearTimeout(autoSendTimer);
+    if (finalText && !interimText) autoSendTimer = window.setTimeout(() => sendCandidateAnswer(), 1900);
+  }
+}
+
+speechToText = new InterviewVoice.SpeechToText({
+  onTranscript: ({finalText, interimText}) => updatePartial(finalText, interimText),
+  onError: (error) => {
+    const readable = error === 'not-allowed' || error === 'service-not-allowed' ? 'Microphone permission was denied. You can type your answer.' : error === 'no-speech' ? 'No speech detected. Try again or type your answer.' : 'Voice input is unavailable. You can type your answer.';
+    document.getElementById('voiceFallbackMessage').hidden = false;
+    document.getElementById('voiceFallbackMessage').textContent = readable;
+    setStatus(readable);
+  },
+  onEnd: (finalText) => {
+    if (finalText && !sendingResponse && !aiIsSpeaking && !listeningMuted && !interviewEnded) {
+      window.clearTimeout(autoSendTimer);
+      autoSendTimer = window.setTimeout(() => sendCandidateAnswer(), 1200);
+    } else if (!aiIsSpeaking && !sendingResponse && !interviewEnded) {
+      setStatus(listeningMuted ? 'Microphone muted' : 'Ready for your answer');
+    }
+  }
+});
+
+textToSpeech = new InterviewVoice.TextToSpeech({
+  onStart: () => { aiIsSpeaking = true; document.getElementById('aiAvatar').classList.add('speaking'); setStatus('AI interviewer is speaking'); },
+  onEnd: () => {
+    aiIsSpeaking = false;
+    document.getElementById('aiAvatar').classList.remove('speaking');
+    if (!sendingResponse) {
+      setStatus(listeningMuted ? 'AI interviewer finished' : 'Your turn to answer');
+      if (!listeningMuted) startListening();
+    }
+  }
+});
+
+answerBox.addEventListener('input', () => renderTranscript(answerBox.value));
+
+document.getElementById('setupForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('btnStartInterview');
+  const error = document.getElementById('setupError');
+  error.textContent = '';
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to interviewer…';
+  const config = {
+    role_id: Number(document.getElementById('roleSelect').value),
+    experience_level: document.getElementById('experienceSelect').value,
+    interview_type: document.getElementById('typeSelect').value,
+    duration_minutes: Number(document.getElementById('durationSelect').value),
+    difficulty: document.getElementById('difficultySelect').value,
+    job_description: document.getElementById('jobDescription').value.trim()
+  };
+  try {
+    const result = await TechTide.api('/api/interview/start', {method: 'POST', body: JSON.stringify(config)});
+    activeConfig = config;
+    activeSessionId = result.session_id;
+    openWorkspace(result);
+    await loadInterviewHistory();
+  } catch (err) {
+    error.textContent = err.message;
+  } finally {
+    button.disabled = false;
+    button.innerHTML = '<i class="fa-solid fa-video"></i> Start Virtual Interview';
+  }
+});
+
+function openWorkspace(session) {
+  activeSessionId = session.session_id;
+  activeConfig = session.config || activeConfig;
+  transcriptMessages = session.messages || [];
+  document.getElementById('interviewSetup').hidden = true;
+  document.getElementById('historySection').hidden = true;
+  document.getElementById('reportSection').hidden = true;
+  document.getElementById('interviewWorkspace').hidden = false;
+  document.getElementById('stageRoleTitle').textContent = session.role_title;
+  document.getElementById('currentQuestionText').textContent = transcriptMessages.filter(message => message.speaker === 'interviewer').at(-1)?.text || 'Ready to begin.';
+  document.getElementById('experienceLabel').textContent = `${activeConfig.interview_type} • ${activeConfig.difficulty}`;
+  const questionNumber = Math.max(1, transcriptMessages.filter(message => message.speaker === 'interviewer').length);
+  document.getElementById('questionProgressText').textContent = `Question ${questionNumber}`;
+  document.getElementById('questionProgressBar').style.width = `${Math.min(100, questionNumber * 14)}%`;
+  renderTranscript();
+  document.getElementById('voiceFallbackMessage').hidden = speechToText.supported;
+  if (!speechToText.supported) document.getElementById('voiceFallbackMessage').textContent = 'Live speech recognition is not supported in this browser. Type your answers below; the AI interviewer will still respond by voice.';
+  const startedAt = localTime(session.started_at);
+  const totalSeconds = (Number(session.duration_minutes || activeConfig.duration_minutes || 20)) * 60;
+  startCountdown(startedAt, totalSeconds);
+  if (session.status === 'active') {
+    interviewEnded = false;
+    document.getElementById('candidateAnswer').disabled = false;
+    document.getElementById('btnSendAnswer').disabled = false;
+    document.getElementById('btnMuteMic').disabled = !speechToText.supported;
+    document.getElementById('btnEndInterview').disabled = false;
+    if (!session.resumed) speakInterviewer(transcriptMessages.filter(message => message.speaker === 'interviewer').at(-1)?.text || 'Welcome. Tell me about yourself.');
+    else if (!listeningMuted) startListening();
+  } else {
+    interviewEnded = true;
+    document.getElementById('candidateAnswer').disabled = true;
+    document.getElementById('btnSendAnswer').disabled = true;
+    document.getElementById('btnMuteMic').disabled = true;
+    document.getElementById('btnEndInterview').innerHTML = '<i class="fa-solid fa-chart-line"></i> Generate report';
+    document.getElementById('btnEndInterview').disabled = false;
+    setStatus('Interview ended. Generate your report.');
+  }
+}
+
+function startCountdown(startedAt, totalSeconds) {
+  window.clearInterval(countdownTimer);
+  const tick = () => {
+    const remaining = Math.max(0, totalSeconds - Math.floor((Date.now() - startedAt.getTime()) / 1000));
+    const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const seconds = String(remaining % 60).padStart(2, '0');
+    document.getElementById('interviewTimer').textContent = `${minutes}:${seconds}`;
+    if (remaining <= 0 && activeSessionId) {
+      window.clearInterval(countdownTimer);
+      endInterview(true);
+    }
+  };
+  tick();
+  countdownTimer = window.setInterval(tick, 1000);
+}
+
+async function sendCandidateAnswer() {
+  window.clearTimeout(autoSendTimer);
+  const response = answerBox.value.trim();
+  if (!response || !activeSessionId || sendingResponse || aiIsSpeaking) return;
+  sendingResponse = true;
+  speechToText.stop();
+  document.getElementById('btnSendAnswer').disabled = true;
+  document.getElementById('composerHint').textContent = 'The interviewer is considering your answer…';
+  setStatus('AI interviewer is thinking');
+  document.getElementById('aiAvatar').classList.add('thinking');
+  try {
+    const result = await TechTide.api('/api/interview/respond', {method: 'POST', body: JSON.stringify({session_id: activeSessionId, response})});
+    answerBox.value = '';
+    appendMessages(result.messages);
+    document.getElementById('currentQuestionText').textContent = result.interviewer_message.text;
+    const questionNumber = result.question_number;
+    document.getElementById('questionProgressText').textContent = `Question ${questionNumber}`;
+    document.getElementById('questionProgressBar').style.width = `${Math.min(100, questionNumber * 14)}%`;
+    document.getElementById('composerHint').textContent = 'Speak naturally. Your answer will be transcribed as you talk.';
+    document.getElementById('voiceFallbackMessage').hidden = true;
+    speakInterviewer(result.interviewer_message.text);
+  } catch (err) {
+    showToast(err.message);
+    document.getElementById('composerHint').textContent = 'Your answer is still here. Check your connection and try again.';
+    if (err.message.toLowerCase().includes('time has ended')) document.getElementById('btnEndInterview').focus();
+  } finally {
+    sendingResponse = false;
+    document.getElementById('aiAvatar').classList.remove('thinking');
+    document.getElementById('btnSendAnswer').disabled = false;
+    if (endAfterResponseReason !== null) {
+      const dueToTimer = endAfterResponseReason;
+      endAfterResponseReason = null;
+      endInterview(dueToTimer);
+    }
+  }
+}
+
+document.getElementById('btnSendAnswer').addEventListener('click', sendCandidateAnswer);
+answerBox.addEventListener('keydown', event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) sendCandidateAnswer(); });
+
+document.getElementById('btnMuteMic').addEventListener('click', () => {
+  listeningMuted = !listeningMuted;
+  if (listeningMuted) {
+    speechToText.stop();
+    document.getElementById('btnMuteMic').innerHTML = '<i class="fa-solid fa-microphone-slash"></i><span>Unmute mic</span>';
+    document.getElementById('btnMuteMic').setAttribute('aria-pressed', 'true');
+    setStatus('Microphone muted');
+  } else {
+    document.getElementById('btnMuteMic').innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mute mic</span>';
+    document.getElementById('btnMuteMic').setAttribute('aria-pressed', 'false');
+    startListening();
+  }
+});
+
+document.getElementById('btnCamera').addEventListener('click', async () => {
+  const button = document.getElementById('btnCamera');
+  const preview = document.getElementById('candidateCameraPreview');
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+    preview.srcObject = null;
+    preview.hidden = true;
+    button.innerHTML = '<i class="fa-solid fa-video-slash"></i><span>Camera off</span>';
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast('Camera access is not available in this browser or context.');
+    return;
+  }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({video: true, audio: false});
+    preview.srcObject = cameraStream;
+    preview.hidden = false;
+    button.innerHTML = '<i class="fa-solid fa-video"></i><span>Camera on</span>';
+  } catch (err) {
+    showToast(err.name === 'NotAllowedError' ? 'Camera permission was denied.' : 'Could not start the camera. Check that it is connected and available.');
+  }
+});
+
+function stopCamera() {
+  cameraStream?.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  const preview = document.getElementById('candidateCameraPreview');
+  preview.srcObject = null;
+  preview.hidden = true;
+  document.getElementById('btnCamera').innerHTML = '<i class="fa-solid fa-video-slash"></i><span>Camera off</span>';
+}
+
+async function endInterview(byTimer = false) {
+  if (!activeSessionId) return;
+  if (sendingResponse) { endAfterResponseReason = byTimer; return; }
+  window.clearInterval(countdownTimer);
+  window.clearTimeout(autoSendTimer);
+  interviewEnded = true;
+  speechToText.stop();
+  textToSpeech.stop();
+  aiIsSpeaking = false;
+  document.getElementById('btnEndInterview').disabled = true;
+  document.getElementById('btnEndInterview').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing report…';
+  try {
+    const result = await TechTide.api('/api/interview/end', {method: 'POST', body: JSON.stringify({session_id: activeSessionId, reason: byTimer ? 'time_limit' : 'candidate_end'})});
+    if (result.closing_message) {
+      appendMessages([result.closing_message]);
+      speakInterviewer(result.closing_message.text);
+    }
+    stopCamera();
+    document.getElementById('interviewWorkspace').hidden = true;
+    renderReport(result.report, activeSessionId);
+    await loadInterviewHistory();
+  } catch (err) {
+    interviewEnded = false;
+    showToast(err.message);
+    if (byTimer && err.message.startsWith('Answer at least one interview question')) {
+      interviewEnded = true;
+      stopCamera();
+      document.getElementById('interviewWorkspace').hidden = true;
+      document.getElementById('interviewSetup').hidden = false;
+      document.getElementById('setupError').textContent = 'Time ran out before an answer was captured, so there is no interview report to score. You can start another session.';
+      activeSessionId = null;
+      await loadInterviewHistory();
+      return;
+    }
+    document.getElementById('btnEndInterview').disabled = false;
+    document.getElementById('btnEndInterview').innerHTML = byTimer ? '<i class="fa-solid fa-rotate"></i> Retry report' : '<i class="fa-solid fa-phone-slash"></i> End interview';
+    if (!byTimer && !listeningMuted) startListening();
+  }
+}
+document.getElementById('btnEndInterview').addEventListener('click', () => endInterview(false));
+
+function renderList(targetId, entries) {
+  const target = document.getElementById(targetId);
+  target.replaceChildren();
+  (entries || []).forEach(item => { const li = document.createElement('li'); li.textContent = item; target.appendChild(li); });
+  if (!target.children.length) { const li = document.createElement('li'); li.textContent = 'No specific items were identified from this conversation.'; target.appendChild(li); }
+}
+
+function renderReport(report, sessionId) {
+  if (!report) { showToast('No evaluation report is available for this interview.'); return; }
+  activeSessionId = sessionId;
+  document.getElementById('interviewSetup').hidden = true;
+  document.getElementById('historySection').hidden = false;
+  const section = document.getElementById('reportSection');
+  section.hidden = false;
+  document.getElementById('reportOverall').textContent = report.overall_score;
+  document.getElementById('reportSummary').textContent = report.summary;
+  document.getElementById('reportNextPractice').textContent = report.next_practice_interview;
+  const scores = [['Communication', report.communication], ['Technical knowledge', report.technical_knowledge], ['Problem solving', report.problem_solving], ['Confidence & clarity', report.confidence_clarity]];
+  document.getElementById('reportScores').innerHTML = scores.map(([label, value]) => `<div class="report-score-card"><div><span></span><strong>${value}<small>/100</small></strong></div><div class="report-score-track"><i style="width:${value}%"></i></div></div>`).join('');
+  document.getElementById('reportScores').querySelectorAll('.report-score-card span').forEach((span, index) => span.textContent = scores[index][0]);
+  renderList('reportStrengths', report.strengths);
+  renderList('reportImprovements', [...(report.weaknesses || []), ...(report.areas_to_improve || [])]);
+  renderList('reportTopics', report.recommended_topics);
+  section.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+async function loadInterviewHistory() {
+  const list = document.getElementById('interviewHistoryList');
+  try {
+    const result = await TechTide.api('/api/interview/history');
+    if (!result.interviews.length) { list.innerHTML = '<p class="transcript-empty">Your saved interviews will appear here.</p>'; return; }
+    list.replaceChildren();
+    result.interviews.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      const details = document.createElement('div');
+      details.className = 'history-details';
+      const role = document.createElement('strong'); role.textContent = item.role_title;
+      const meta = document.createElement('span'); meta.textContent = `${localTime(item.started_at).toLocaleString()} · ${item.duration_minutes} min · ${item.status}`;
+      details.append(role, meta);
+      if (item.overall_score !== null) { const score = document.createElement('span'); score.className = 'history-score'; score.textContent = `${item.overall_score}/100`; details.appendChild(score); }
+      const action = document.createElement('button'); action.type = 'button'; action.className = 'btn btn-secondary btn-sm'; action.textContent = item.has_report ? 'View report' : item.status === 'active' ? 'Resume' : 'View transcript';
+      action.addEventListener('click', () => openHistoryItem(item));
+      row.append(details, action); list.appendChild(row);
+    });
+  } catch (err) { list.innerHTML = '<p class="transcript-empty">Interview history could not be loaded.</p>'; }
+}
+
+async function openHistoryItem(item) {
+  try {
+    const session = await TechTide.api(`/api/interview/session/${item.session_id}`);
+    activeSessionId = session.session_id;
+    activeConfig = session.config;
+    if (session.report) { renderReport(session.report, session.session_id); return; }
+    if (session.status === 'active' || session.status === 'expired') {
+      openWorkspace({...session, resumed: true});
+      return;
+    }
+    transcriptMessages = session.messages;
+    renderTranscript();
+    showToast('This interview has no evaluation report yet.', 'info');
+  } catch (err) { showToast(err.message); }
+}
+
+document.getElementById('refreshHistory').addEventListener('click', loadInterviewHistory);
+
+async function downloadTranscript() {
+  if (!activeSessionId) return;
+  const token = localStorage.getItem('techtide_token');
+  try {
+    const response = await fetch(`/api/interview/transcript/${activeSessionId}`, {headers: token ? {Authorization: `Bearer ${token}`} : {}});
+    if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || 'Transcript download failed'); }
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `interview-${activeSessionId}-transcript.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (err) { showToast(err.message); }
+}
+document.getElementById('btnDownloadTranscript').addEventListener('click', downloadTranscript);
+document.getElementById('btnReportTranscript').addEventListener('click', downloadTranscript);
+
+document.getElementById('btnRestartInterview').addEventListener('click', () => {
+  activeSessionId = null;
+  transcriptMessages = [];
+  listeningMuted = false;
+  interviewEnded = false;
+  stopCamera();
+  document.getElementById('btnMuteMic').disabled = !speechToText.supported;
+  document.getElementById('btnMuteMic').setAttribute('aria-pressed', 'false');
+  document.getElementById('btnMuteMic').innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mute mic</span>';
+  answerBox.value = '';
+  document.getElementById('interviewSetup').hidden = false;
+  document.getElementById('interviewWorkspace').hidden = true;
+  document.getElementById('reportSection').hidden = true;
+  document.getElementById('historySection').hidden = false;
+  renderTranscript();
+});
+
+window.addEventListener('beforeunload', () => {
+  speechToText.stop();
+  textToSpeech.stop();
+  cameraStream?.getTracks().forEach(track => track.stop());
+});
+
+loadInterviewHistory();
+</script>
+{% endblock %}

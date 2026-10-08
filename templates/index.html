@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Home • AI Skill Gap & Career Roadmap Platform{% endblock %}
+
+{% block content %}
+<div style="text-align: center; max-width: 820px; margin: 2rem auto 3rem auto;">
+  <span class="badge badge-primary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem; margin-bottom: 1rem;">
+    <i class="fa-solid fa-sparkles"></i> Team TechTide • Hackday 1.0 • EdTech / Career Development
+  </span>
+  <h1 style="font-size: 2.75rem; font-weight: 800; line-height: 1.2; margin: 1rem 0; color: #0f172a; letter-spacing: -0.03em;">
+    Bridge Your Skill Gaps. Close the Distance to Your Dream Career.
+  </h1>
+  <p style="font-size: 1.15rem; color: #475569; margin-bottom: 2rem;">
+    A hybrid AI platform that parses your resume, pinpoints exact missing skills with deterministic explainable math, and builds a grounded, budget-aware roadmap with curated resources and practical projects.
+  </p>
+
+  <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+    {% if user %}
+      <a href="{{ url_for('web.dashboard_page') }}" class="btn btn-primary" style="padding: 0.75rem 1.6rem; font-size: 1rem;">
+        <i class="fa-solid fa-gauge-high"></i> Go to Your Dashboard
+      </a>
+      <a href="{{ url_for('web.roadmap_page') }}" class="btn btn-secondary" style="padding: 0.75rem 1.6rem; font-size: 1rem;">
+        <i class="fa-solid fa-map"></i> View Career Roadmap
+      </a>
+    {% else %}
+      <a href="{{ url_for('web.register_page') }}" class="btn btn-primary" style="padding: 0.75rem 1.6rem; font-size: 1rem;">
+        <i class="fa-solid fa-rocket"></i> Get Started Free
+      </a>
+      <button onclick="quickLogin('alex@techtide.io', 'alex123')" class="btn btn-outline-primary" style="padding: 0.75rem 1.6rem; font-size: 1rem;">
+        <i class="fa-solid fa-user-check"></i> Demo as Candidate (Alex)
+      </button>
+      <button onclick="quickLogin('admin@techtide.io', 'admin123')" class="btn btn-secondary" style="padding: 0.75rem 1.6rem; font-size: 1rem;">
+        <i class="fa-solid fa-shield-halved"></i> Demo as Admin
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Architecture Core Pillars -->
+<div class="grid grid-cols-4" style="margin-bottom: 3.5rem;">
+  <div class="card" style="border-top: 4px solid var(--primary);">
+    <div style="color: var(--primary); font-size: 1.5rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-calculator"></i></div>
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Explainable Math</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      Every career-readiness score is mathematically interpretable. See exact point loss formulas like <i>"Missing Docker costs 9.2 pts"</i>.
+    </p>
+  </div>
+
+  <div class="card" style="border-top: 4px solid var(--success);">
+    <div style="color: var(--success); font-size: 1.5rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-link"></i></div>
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Grounded Content</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      No invented links or hallucinated courses. Roadmaps assemble exclusively from verified database resources and realistic projects.
+    </p>
+  </div>
+
+  <div class="card" style="border-top: 4px solid var(--warning);">
+    <div style="color: var(--warning); font-size: 1.5rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-shield-virus"></i></div>
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">100% Resilient</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      Seamless hybrid architecture: Rule-based extractors and deterministic template planners take over if external AI APIs are offline.
+    </p>
+  </div>
+
+  <div class="card" style="border-top: 4px solid #7c3aed;">
+    <div style="color: #7c3aed; font-size: 1.5rem; margin-bottom: 0.5rem;"><i class="fa-solid fa-sliders"></i></div>
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem;">Extensible Admin</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted);">
+      Add new roles, skills taxonomy, weights, and learning resources dynamically via admin panel with zero code changes or redeployments.
+    </p>
+  </div>
+</div>
+
+<!-- Available Roles Catalog -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-briefcase" style="color: var(--primary);"></i> Supported Career Pathways & Roles
+    </div>
+    <span class="badge badge-primary">{{ roles|length }} Curated Roles • {{ skills_count }} Canonical Skills</span>
+  </div>
+  <div class="grid grid-cols-2" style="margin-top: 1rem;">
+    {% for role in roles %}
+      <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+          <h4 style="font-size: 1rem; font-weight: 700; color: #1e293b;">{{ role.title }}</h4>
+          <span class="badge badge-primary">{{ role.domain }}</span>
+        </div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">{{ role.description }}</p>
+        <div style="font-size: 0.8rem; color: #475569;">
+          <i class="fa-solid fa-check-circle" style="color: var(--success);"></i> {{ role.role_skills|length }} mapped competency requirements
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function quickLogin(email, password) {
+  try {
+    const res = await TechTide.api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    localStorage.setItem('techtide_token', res.token);
+    TechTide.toast(`Signed in as ${res.user.name}`, 'success');
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 500);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+</script>
+{% endblock %}

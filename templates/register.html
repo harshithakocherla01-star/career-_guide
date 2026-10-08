@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account • TechTide Career Platform{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 2rem auto;">
+  <div class="card">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-icon" style="margin: 0 auto 0.75rem auto; width: 44px; height: 44px; font-size: 1.3rem;">
+        <i class="fa-solid fa-user-plus"></i>
+      </div>
+      <h2 style="font-size: 1.5rem; font-weight: 800;">Create Your Account</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Set up your profile, target role, and study commitment</p>
+    </div>
+
+    <form id="registerForm">
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name</label>
+        <input type="text" id="name" class="form-control" placeholder="Jane Doe" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" class="form-control" placeholder="jane@example.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="At least 6 characters" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="target_role_id">Target Career Goal</label>
+        <select id="target_role_id" class="form-select" required>
+          <option value="">-- Choose Target Role --</option>
+          {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.title }} ({{ r.domain }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="hours_per_week">Available Study Budget (Hours / Week)</label>
+        <input type="number" id="hours_per_week" class="form-control" value="12" min="2" max="60" required>
+        <small style="color: var(--text-muted); font-size: 0.75rem;">Your roadmap will pace milestones according to this weekly budget.</small>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; margin-top: 0.5rem;">
+        <i class="fa-solid fa-rocket"></i> Start Career Evaluation
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.25rem; font-size: 0.85rem;">
+      Already have an account? <a href="{{ url_for('web.login_page') }}" style="color: var(--primary); font-weight: 600;">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const target_role_id = document.getElementById('target_role_id').value;
+  const hours_per_week = document.getElementById('hours_per_week').value;
+
+  try {
+    const res = await TechTide.api('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        target_role_id: parseInt(target_role_id),
+        hours_per_week: parseInt(hours_per_week)
+      })
+    });
+    localStorage.setItem('techtide_token', res.token);
+    TechTide.toast('Registration complete! Welcome aboard.', 'success');
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 400);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "title": "Full Stack Web Developer",
+    "description": "Designs, develops, and maintains end-to-end web applications, encompassing responsive frontends, scalable REST/GraphQL APIs, relational and NoSQL databases, and containerized deployment workflows.",
+    "domain": "Web Development"
+  },
+  {
+    "id": 2,
+    "title": "Data Scientist",
+    "description": "Applies statistical modeling, exploratory data analysis, and predictive machine learning algorithms to turn raw structured and unstructured data into strategic insights and decision systems.",
+    "domain": "AI & Data Science"
+  },
+  {
+    "id": 3,
+    "title": "DevOps & Cloud Engineer",
+    "description": "Architects resilient cloud infrastructure, builds automated CI/CD deployment pipelines, manages Kubernetes clusters, and guarantees high availability and monitoring across environments.",
+    "domain": "Cloud & Infrastructure"
+  },
+  {
+    "id": 4,
+    "title": "Machine Learning Engineer",
+    "description": "Builds and productionizes deep learning, NLP, and predictive ML models, architecting feature pipelines, distributed training, and ultra-low latency model serving APIs.",
+    "domain": "AI & Machine Learning"
+  },
+  {
+    "id": 5,
+    "title": "Backend Engineer",
+    "description": "Specializes in high-performance server-side architectures, microservices, database schema design and optimization, transaction management, and robust authentication layers.",
+    "domain": "Backend Development"
+  },
+  {
+    "id": 6,
+    "title": "Frontend Engineer",
+    "description": "Builds fast, accessible, and delightful interactive user interfaces with modern reactive component frameworks, client-side state management, and optimized responsive layouts.",
+    "domain": "Frontend Development"
+  },
+  {
+    "id": 7,
+    "title": "Cyber Security Analyst",
+    "description": "Protects organizational assets by identifying vulnerabilities, implementing authentication and OWASP defensive standards, monitoring network traffic, and incident remediation.",
+    "domain": "Security & Infrastructure"
+  },
+  {
+    "id": 8,
+    "title": "Data Engineer",
+    "description": "Constructs reliable data pipelines, automated ETL workflows, warehouse data modeling, and streaming infrastructure to support large-scale analytical workloads.",
+    "domain": "Data Platforms"
+  }
+]

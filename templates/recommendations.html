@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Role & Career-Path Recommendations • TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Role & Career-Path Recommendations</h1>
+    <p class="page-subtitle">Multi-dimensional vector analysis using NumPy cosine similarity to discover your highest-aligned career roles.</p>
+  </div>
+  <a href="{{ url_for('web.dashboard_page') }}" class="btn btn-secondary">
+    <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+  </a>
+</div>
+
+<!-- Recommendation Cards Grid -->
+<div id="rolesList" class="grid grid-cols-2" style="margin-bottom: 2rem;">
+  <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+    <p>Calculating vector cosine similarities...</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTargetRoleId = null;
+
+async function loadRecommendations() {
+  try {
+    const res = await TechTide.api('/api/recommendations');
+    currentTargetRoleId = res.target_role_id;
+    const recs = res.recommendations || [];
+
+    const container = document.getElementById('rolesList');
+    if (recs.length === 0) {
+      container.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align: center;">No role recommendations found.</div>`;
+      return;
+    }
+
+    container.innerHTML = recs.map((r, idx) => {
+      const isCurrent = r.role_id === currentTargetRoleId;
+      const match = r.match_percentage || 0;
+      let barColor = '#ef4444';
+      if (match >= 75) barColor = '#10b981';
+      else if (match >= 45) barColor = '#2563eb';
+      else if (match >= 25) barColor = '#f59e0b';
+
+      return `
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid ${barColor};">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+              <div>
+                <span class="badge badge-primary" style="margin-bottom: 0.4rem; font-size: 0.75rem;">Rank #${idx + 1} • ${r.domain}</span>
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">${r.title}</h3>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 1.6rem; font-weight: 800; color: ${barColor};">${match}%</span>
+                <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Vector Match</div>
+              </div>
+            </div>
+
+            <!-- Match Progress Bar -->
+            <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 1.25rem;">
+              <div style="width: ${match}%; height: 100%; background: ${barColor}; border-radius: 4px;"></div>
+            </div>
+
+            <!-- Unlocking Skills -->
+            <div style="margin-bottom: 1.25rem;">
+              <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-key" style="color: #f59e0b;"></i> Top 2-3 Unlocking Skills:
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                ${r.unlock_skills.length > 0 ? r.unlock_skills.map(u => `
+                  <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                    <span><b>${u.skill_name}</b> <small style="color:var(--text-muted);">(Weight ${u.weight})</small></span>
+                    <span class="badge badge-warning" style="font-size: 0.75rem;">Requires Lvl ${u.required_level}</span>
+                  </div>
+                `).join('') : '<div style="font-size: 0.85rem; color: var(--success);"><i class="fa-solid fa-check"></i> All primary skills acquired!</div>'}
+              </div>
+            </div>
+          </div>
+
+          <div style="padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            ${isCurrent ? `
+              <span class="badge badge-matched" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                <i class="fa-solid fa-crosshairs"></i> Current Active Goal
+              </span>
+            ` : `
+              <button class="btn btn-outline-primary btn-sm" onclick="setAsTargetRole(${r.role_id})">
+                <i class="fa-solid fa-check"></i> Select as Target Goal
+              </button>
+            `}
+            <a href="/dashboard" class="btn btn-secondary btn-sm">View Analysis</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+
+async function setAsTargetRole(roleId) {
+  try {
+    await TechTide.updateProfileGoals(roleId, 12);
+    TechTide.toast('Target role updated! Regerating analysis...', 'success');
+    loadRecommendations();
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadRecommendations);
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel & Cohort Analytics • TechTide{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="fa-solid fa-shield-halved" style="color: #7c3aed;"></i> Admin Console & Cohort Analytics</h1>
+    <p class="page-subtitle">Manage taxonomy, roles, requirements, and analyze macro skill gaps across all candidates.</p>
+  </div>
+  <a href="{{ url_for('web.dashboard_page') }}" class="btn btn-secondary">
+    <i class="fa-solid fa-arrow-left"></i> Candidate Dashboard
+  </a>
+</div>
+
+<!-- Macro Analytics Summary -->
+<div class="grid grid-cols-4" style="margin-bottom: 1.5rem;">
+  <div class="card" style="border-left: 4px solid #7c3aed;">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Candidates</div>
+    <div id="adminTotalCandidates" style="font-size: 1.85rem; font-weight: 800; color: #7c3aed;">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--primary);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Milestones Completed</div>
+    <div id="adminMilestonesCompleted" style="font-size: 1.85rem; font-weight: 800; color: var(--primary);">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--success);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Completion Rate</div>
+    <div id="adminMilestonesRate" style="font-size: 1.85rem; font-weight: 800; color: var(--success);">-</div>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--danger);">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Top Gap Skill</div>
+    <div id="adminTopGapSkill" style="font-size: 1.25rem; font-weight: 800; color: var(--danger); margin-top: 0.35rem;">-</div>
+  </div>
+</div>
+
+<!-- Analytics Charts -->
+<div class="grid grid-cols-2" style="margin-bottom: 2rem;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-chart-column" style="color: var(--danger);"></i> Most Common Missing Skills Across Candidates
+      </div>
+    </div>
+    <div style="height: 300px; position: relative;">
+      <canvas id="adminBarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fa-solid fa-graduation-cap" style="color: var(--primary);"></i> Average Readiness by Target Role
+      </div>
+    </div>
+    <div id="roleAvgList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
+      <div style="color: var(--text-muted); font-size: 0.85rem;">Loading role readiness...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Extensibility Management Tabs -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fa-solid fa-database" style="color: var(--primary);"></i> Taxonomy & Role Extensibility Management
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+    <button class="btn btn-secondary btn-sm admin-tab active" onclick="switchAdminTab('newRole', this)">Create Role</button>
+    <button class="btn btn-secondary btn-sm admin-tab" onclick="switchAdminTab('newSkill', this)">Create Canonical Skill</button>
+    <button class="btn btn-secondary btn-sm admin-tab" onclick="switchAdminTab('newMapping', this)">Add Role Requirement</button>
+    <button class="btn btn-secondary btn-sm admin-tab" onclick="switchAdminTab('newResource', this)">Add Verified Resource</button>
+  </div>
+
+  <!-- Form 1: Create Role -->
+  <div id="tabNewRole" class="admin-tab-content">
+    <form id="createRoleForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="form-group">
+        <label class="form-label">Role Title</label>
+        <input type="text" id="roleTitle" class="form-control" placeholder="e.g. AI Prompt Engineer" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Domain</label>
+        <input type="text" id="roleDomain" class="form-control" placeholder="e.g. AI & NLP" required>
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label class="form-label">Description</label>
+        <textarea id="roleDesc" class="form-control" rows="2" placeholder="Responsibilities and scope of this career role..." required></textarea>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Save Role</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Form 2: Create Canonical Skill -->
+  <div id="tabNewSkill" class="admin-tab-content" style="display: none;">
+    <form id="createSkillForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="form-group">
+        <label class="form-label">Canonical Skill ID</label>
+        <input type="text" id="skillId" class="form-control" placeholder="e.g. rust" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Skill Display Name</label>
+        <input type="text" id="skillName" class="form-control" placeholder="e.g. Rust Systems Programming" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <input type="text" id="skillCat" class="form-control" placeholder="e.g. Programming Languages" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Synonyms (Comma-separated)</label>
+        <input type="text" id="skillSynonyms" class="form-control" placeholder="e.g. rust-lang, cargo">
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Save Canonical Skill</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Form 3: Add Role-Skill Mapping -->
+  <div id="tabNewMapping" class="admin-tab-content" style="display: none;">
+    <form id="createMappingForm" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: flex-end;">
+      <div class="form-group">
+        <label class="form-label">Select Role</label>
+        <select id="mapRole" class="form-select" required>
+          {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Select Skill</label>
+        <select id="mapSkill" class="form-select" required>
+          {% for s in skills %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight (0.1 - 1.0)</label>
+        <input type="number" id="mapWeight" class="form-control" step="0.1" min="0.1" max="1.0" value="0.8" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Required Level (1 - 5)</label>
+        <input type="number" id="mapLevel" class="form-control" min="1" max="5" value="3" required>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-link"></i> Add Requirement</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Form 4: Add Curated Resource -->
+  <div id="tabNewResource" class="admin-tab-content" style="display: none;">
+    <form id="createResourceForm" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: flex-end;">
+      <div class="form-group">
+        <label class="form-label">Target Skill</label>
+        <select id="resSkill" class="form-select" required>
+          {% for s in skills %}
+            <option value="{{ s.id }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Resource Title</label>
+        <input type="text" id="resTitle" class="form-control" placeholder="Official Rust Book" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL</label>
+        <input type="url" id="resUrl" class="form-control" placeholder="https://doc.rust-lang.org/book/" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select id="resType" class="form-select">
+          <option value="doc">Documentation</option>
+          <option value="course">Interactive Course</option>
+          <option value="video">Video Tutorial</option>
+          <option value="article">Deep Dive Article</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estimated Hours</label>
+        <input type="number" id="resHours" class="form-control" step="0.5" min="1" max="50" value="6.0" required>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Save Resource</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAdminAnalytics() {
+  try {
+    const res = await TechTide.api('/api/admin/analytics/skill-gaps');
+    document.getElementById('adminTotalCandidates').textContent = res.total_candidates;
+    document.getElementById('adminMilestonesCompleted').textContent = res.milestones_stats.completed;
+    document.getElementById('adminMilestonesRate').textContent = `${res.milestones_stats.completion_rate}%`;
+
+    const topMissing = res.top_missing_skills || [];
+    if (topMissing.length > 0) {
+      document.getElementById('adminTopGapSkill').textContent = `${topMissing[0].skill} (${topMissing[0].count} users)`;
+      const labels = topMissing.map(m => m.skill);
+      const counts = topMissing.map(m => m.count);
+      TechTideCharts.renderAdminBarChart('adminBarChart', labels, counts);
+    }
+
+    const avgRoleList = document.getElementById('roleAvgList');
+    const roleAvgs = res.avg_readiness_by_role || {};
+    if (Object.keys(roleAvgs).length === 0) {
+      avgRoleList.innerHTML = `<div style="color: var(--text-muted);">No candidate role data recorded yet.</div>`;
+    } else {
+      avgRoleList.innerHTML = Object.entries(roleAvgs).map(([role, avg]) => `
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 600; font-size: 0.9rem;">${role}</span>
+          <span class="badge ${avg >= 70 ? 'badge-matched' : (avg >= 40 ? 'badge-partial' : 'badge-missing')}">${avg}% Avg</span>
+        </div>
+      `).join('');
+    }
+
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+}
+
+function switchAdminTab(tabId, element) {
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  if (element) {
+    element.classList.add('active');
+  } else if (window.event && window.event.target) {
+    window.event.target.classList.add('active');
+  }
+  document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
+
+  if (tabId === 'newRole') document.getElementById('tabNewRole').style.display = 'block';
+  if (tabId === 'newSkill') document.getElementById('tabNewSkill').style.display = 'block';
+  if (tabId === 'newMapping') document.getElementById('tabNewMapping').style.display = 'block';
+  if (tabId === 'newResource') document.getElementById('tabNewResource').style.display = 'block';
+}
+
+// Form 1: Role
+document.getElementById('createRoleForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await TechTide.api('/api/admin/roles', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: document.getElementById('roleTitle').value.trim(),
+        domain: document.getElementById('roleDomain').value.trim(),
+        description: document.getElementById('roleDesc').value.trim()
+      })
+    });
+    TechTide.toast('Role created successfully!', 'success');
+    setTimeout(() => window.location.reload(), 600);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+
+// Form 2: Skill
+document.getElementById('createSkillForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const rawSyn = document.getElementById('skillSynonyms').value;
+  const synonyms = rawSyn.split(',').map(s => s.trim()).filter(Boolean);
+  try {
+    await TechTide.api('/api/admin/skills', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: document.getElementById('skillId').value.trim().toLowerCase(),
+        name: document.getElementById('skillName').value.trim(),
+        category: document.getElementById('skillCat').value.trim(),
+        synonyms: synonyms
+      })
+    });
+    TechTide.toast('Canonical skill created!', 'success');
+    setTimeout(() => window.location.reload(), 600);
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+
+// Form 3: Role Requirement
+document.getElementById('createMappingForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await TechTide.api('/api/admin/role-skills', {
+      method: 'POST',
+      body: JSON.stringify({
+        role_id: parseInt(document.getElementById('mapRole').value),
+        skill_id: document.getElementById('mapSkill').value,
+        weight: parseFloat(document.getElementById('mapWeight').value),
+        required_level: parseInt(document.getElementById('mapLevel').value)
+      })
+    });
+    TechTide.toast('Role requirement saved!', 'success');
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+
+// Form 4: Resource
+document.getElementById('createResourceForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await TechTide.api('/api/admin/resources', {
+      method: 'POST',
+      body: JSON.stringify({
+        skill_id: document.getElementById('resSkill').value,
+        title: document.getElementById('resTitle').value.trim(),
+        url: document.getElementById('resUrl').value.trim(),
+        type: document.getElementById('resType').value,
+        hours: parseFloat(document.getElementById('resHours').value)
+      })
+    });
+    TechTide.toast('Verified resource added!', 'success');
+    document.getElementById('createResourceForm').reset();
+  } catch (err) {
+    TechTide.toast(err.message, 'error');
+  }
+});
+
+document.addEventListener('DOMContentLoaded', loadAdminAnalytics);
+</script>
+{% endblock %}

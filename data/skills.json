@@ -1,0 +1,247 @@
+[
+  {
+    "id": "python",
+    "name": "Python",
+    "category": "Programming Languages",
+    "synonyms": ["python3", "py", "cpython"],
+    "prerequisites": []
+  },
+  {
+    "id": "javascript",
+    "name": "JavaScript",
+    "category": "Programming Languages",
+    "synonyms": ["js", "es6", "ecmascript"],
+    "prerequisites": []
+  },
+  {
+    "id": "typescript",
+    "name": "TypeScript",
+    "category": "Programming Languages",
+    "synonyms": ["ts"],
+    "prerequisites": ["javascript"]
+  },
+  {
+    "id": "html_css",
+    "name": "HTML5 & CSS3",
+    "category": "Frontend & UI",
+    "synonyms": ["html", "css", "html5", "css3", "web markup"],
+    "prerequisites": []
+  },
+  {
+    "id": "react",
+    "name": "React",
+    "category": "Frontend & UI",
+    "synonyms": ["reactjs", "react.js", "react-native"],
+    "prerequisites": ["javascript", "html_css"]
+  },
+  {
+    "id": "vue",
+    "name": "Vue.js",
+    "category": "Frontend & UI",
+    "synonyms": ["vue", "vuejs"],
+    "prerequisites": ["javascript", "html_css"]
+  },
+  {
+    "id": "tailwind",
+    "name": "Tailwind CSS",
+    "category": "Frontend & UI",
+    "synonyms": ["tailwindcss", "tailwind-css"],
+    "prerequisites": ["html_css"]
+  },
+  {
+    "id": "nodejs",
+    "name": "Node.js",
+    "category": "Backend & APIs",
+    "synonyms": ["node", "node.js"],
+    "prerequisites": ["javascript"]
+  },
+  {
+    "id": "express",
+    "name": "Express.js",
+    "category": "Backend & APIs",
+    "synonyms": ["express", "expressjs"],
+    "prerequisites": ["nodejs"]
+  },
+  {
+    "id": "flask",
+    "name": "Flask",
+    "category": "Backend & APIs",
+    "synonyms": ["flask-py", "flask python"],
+    "prerequisites": ["python"]
+  },
+  {
+    "id": "fastapi",
+    "name": "FastAPI",
+    "category": "Backend & APIs",
+    "synonyms": ["fast-api", "fast api"],
+    "prerequisites": ["python"]
+  },
+  {
+    "id": "django",
+    "name": "Django",
+    "category": "Backend & APIs",
+    "synonyms": ["django framework", "django-rest-framework", "drf"],
+    "prerequisites": ["python"]
+  },
+  {
+    "id": "rest_api",
+    "name": "RESTful API Design",
+    "category": "Backend & APIs",
+    "synonyms": ["rest", "restful", "rest apis", "api design", "json api"],
+    "prerequisites": []
+  },
+  {
+    "id": "graphql",
+    "name": "GraphQL",
+    "category": "Backend & APIs",
+    "synonyms": ["apollo graphql", "gql"],
+    "prerequisites": ["rest_api"]
+  },
+  {
+    "id": "sql",
+    "name": "SQL & Relational DBs",
+    "category": "Databases & Caching",
+    "synonyms": ["structured query language", "rdbms", "relational database"],
+    "prerequisites": []
+  },
+  {
+    "id": "postgresql",
+    "name": "PostgreSQL",
+    "category": "Databases & Caching",
+    "synonyms": ["postgres", "pgsql", "psql"],
+    "prerequisites": ["sql"]
+  },
+  {
+    "id": "mongodb",
+    "name": "MongoDB",
+    "category": "Databases & Caching",
+    "synonyms": ["mongo", "nosql", "documentdb"],
+    "prerequisites": []
+  },
+  {
+    "id": "redis",
+    "name": "Redis",
+    "category": "Databases & Caching",
+    "synonyms": ["redis cache", "in-memory database"],
+    "prerequisites": []
+  },
+  {
+    "id": "git",
+    "name": "Git & GitHub",
+    "category": "Tools",
+    "synonyms": ["git", "github", "gitlab", "version control", "vcs"],
+    "prerequisites": []
+  },
+  {
+    "id": "linux",
+    "name": "Linux & Bash",
+    "category": "Tools",
+    "synonyms": ["linux", "bash", "shell scripting", "ubuntu", "unix"],
+    "prerequisites": []
+  },
+  {
+    "id": "docker",
+    "name": "Docker & Containers",
+    "category": "Cloud & DevOps",
+    "synonyms": ["docker", "containerization", "docker-compose", "containers"],
+    "prerequisites": ["linux"]
+  },
+  {
+    "id": "kubernetes",
+    "name": "Kubernetes",
+    "category": "Cloud & DevOps",
+    "synonyms": ["k8s", "container orchestration"],
+    "prerequisites": ["docker"]
+  },
+  {
+    "id": "ci_cd",
+    "name": "CI/CD Pipelines",
+    "category": "Cloud & DevOps",
+    "synonyms": ["continuous integration", "github actions", "gitlab ci", "jenkins"],
+    "prerequisites": ["git"]
+  },
+  {
+    "id": "aws",
+    "name": "AWS Cloud Services",
+    "category": "Cloud & DevOps",
+    "synonyms": ["amazon web services", "aws ec2", "s3", "lambda", "cloud computing"],
+    "prerequisites": ["linux"]
+  },
+  {
+    "id": "terraform",
+    "name": "Terraform / IaC",
+    "category": "Cloud & DevOps",
+    "synonyms": ["terraform", "infrastructure as code", "iac"],
+    "prerequisites": ["aws"]
+  },
+  {
+    "id": "pandas",
+    "name": "Pandas & Data Wrangling",
+    "category": "AI & Data Science",
+    "synonyms": ["pandas", "dataframe", "data analysis"],
+    "prerequisites": ["python"]
+  },
+  {
+    "id": "numpy",
+    "name": "NumPy & Math",
+    "category": "AI & Data Science",
+    "synonyms": ["numpy", "numerical computing", "linear algebra"],
+    "prerequisites": ["python"]
+  },
+  {
+    "id": "scikit_learn",
+    "name": "Scikit-Learn (ML)",
+    "category": "AI & Data Science",
+    "synonyms": ["scikit-learn", "sklearn", "machine learning", "supervised learning"],
+    "prerequisites": ["pandas", "numpy"]
+  },
+  {
+    "id": "pytorch",
+    "name": "PyTorch / Deep Learning",
+    "category": "AI & Data Science",
+    "synonyms": ["pytorch", "torch", "deep learning", "neural networks"],
+    "prerequisites": ["scikit_learn"]
+  },
+  {
+    "id": "tensorflow",
+    "name": "TensorFlow / Keras",
+    "category": "AI & Data Science",
+    "synonyms": ["tensorflow", "tf", "keras"],
+    "prerequisites": ["scikit_learn"]
+  },
+  {
+    "id": "nlp",
+    "name": "Natural Language Processing",
+    "category": "AI & Data Science",
+    "synonyms": ["nlp", "transformers", "huggingface", "llm", "embeddings"],
+    "prerequisites": ["pytorch"]
+  },
+  {
+    "id": "system_design",
+    "name": "System Design & Scalability",
+    "category": "Architecture & Engineering",
+    "synonyms": ["system design", "distributed systems", "high availability", "scalability", "caching strategies"],
+    "prerequisites": ["rest_api", "sql"]
+  },
+  {
+    "id": "unit_testing",
+    "name": "Testing & QA",
+    "category": "Architecture & Engineering",
+    "synonyms": ["pytest", "jest", "unit test", "tdd", "integration testing"],
+    "prerequisites": []
+  },
+  {
+    "id": "security_basics",
+    "name": "Application Security & Auth",
+    "category": "Architecture & Engineering",
+    "synonyms": ["jwt", "oauth2", "owasp", "web security", "encryption", "https"],
+    "prerequisites": ["rest_api"]
+  },
+  {
+    "id": "network_security",
+    "name": "Network Security & Firewalls",
+    "category": "Architecture & Engineering",
+    "synonyms": ["firewalls", "tcp/ip", "dns", "vpn", "ids/ips", "wireshark"],
+    "prerequisites": ["linux"]
+  }
+]
